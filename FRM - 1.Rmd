@@ -1,0 +1,392 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+rm(list=ls())
+```
+
+
+```{r}
+library(readr)
+library(xts)
+library(fGarch)
+library(moments)
+library(ggplot2)
+library(tseries)
+library(rugarch)
+library(extRemes)
+library(secr)
+```
+
+
+```{r}
+BK <- read_csv("BK.csv", 
+    col_types = cols(Date = col_date(format = "%d/%m/%Y")))
+```
+
+```{r}
+BK_price <- BK$`Adj Close`
+date <- BK$Date
+```
+
+```{r}
+dailyprice <- as.xts(BK_price,order.by=date)
+```
+
+```{r}
+plot(dailyprice)
+```
+
+
+```{r}
+return_series <- diff(log(dailyprice),lag=1)[-1,]
+plot(return_series)
+plot(abs(return_series), main = "Absolute Returns")
+plot(return_series^2, main = "Squared Returns")
+```
+
+```{r}
+mean <- mean(return_series,na.rm=TRUE)
+```
+
+```{r}
+dailyvol <- return_series
+dailyvol[] <- NA
+
+dailyvol[,1] <- garchFit(~garch(1,1), data = return_series[,1])@sigma.t
+
+```
+
+```{r}
+plot(dailyvol)
+```
+
+AC of Returns
+```{r}
+acf(return_series)
+mtext('Autocorrelation of Returns', side = 3, line = -2, outer = TRUE, cex = 1.5)
+pacf(return_series)
+mtext('Partial Autocorrelation of Returns', side = 3, line = -2, outer = TRUE, cex = 1.5)
+```
+
+AC of Volatility
+```{r}
+acf(dailyvol, lag.max = 100)
+mtext('Autocorrelation of volatility', side = 3, line = -2, outer = TRUE, cex = 1.5)
+pacf(dailyvol)
+mtext('Partial Autocorrelation of volatility', side = 3, line = -2, outer = TRUE, cex = 1.5)
+
+```
+
+Squared Returns
+```{r}
+sq_returns <- return_series^2
+plot(sq_returns)
+```
+```{r}
+acf(sq_returns, lag.max = 100)
+mtext('Autocorrelation of Squared Returns', side = 3, line = -2, outer = TRUE, cex = 1.5)
+pacf(sq_returns)
+mtext('Partial Autocorrelation of Squared Returns', side = 3, line = -2, outer = TRUE, cex = 1.5)
+```
+
+
+```{r}
+positive_returns <- return_series[return_series> 0]
+
+negative_returns <- return_series[return_series< 0]
+
+```
+
+```{r}
+zero_vector <- as.vector(matrix(0,nrow=length(return_series)))
+regression <- cbind(Y=sq_returns,X1=lag(sq_returns,1),X2=pmax(zero_vector,lag(return_series,1), na.rm = TRUE),X3=pmin(zero_vector,lag(return_series,1),na.rm = TRUE))
+regression[is.na(regression)] <-0 
+
+lm_fit <- lm(Y ~ X1+X2+X3,regression)
+summary(lm_fit)
+
+anova(lm_fit)
+```
+
+
+```{r}
+## Plots for theoretical argumentations 
+dat <- return_series
+
+d<- density(dat) # returns the density data
+plot(d, xlab = "Returns", lty ="dotted",col="red", lwd =3, main = "Density comparison")
+xfit<-seq(min(dat),max(dat),length=100) 
+yfit<-dnorm(xfit,mean=mean(dat),sd=sd(dat)) 
+lines(xfit, yfit, col="blue", lty = "dotted", lwd=2)
+legend(-0.3, 30, legend=c("empirical density", "normal density"),
+       col=c("red", "blue"), lty="dotted", cex=0.8)
+```
+
+
+```{r}
+
+ggplot(regression, aes(x = X2)) + 
+  geom_histogram(aes(y = ..density..), fill = 'blue', alpha = 0.5, binwidth = 0.001) + 
+  geom_density(colour = 'red') + xlab(expression(bold('Time Series'))) + 
+  ylab(expression(bold('Density')))
+
+ggplot(regression, aes(x = X3)) + 
+  geom_histogram(aes(y = ..density..), fill = 'blue', alpha = 0.5, binwidth = 0.001) + 
+  geom_density(colour = 'red') + xlab(expression(bold('Time Series'))) + 
+  xlab(expression(bold('Time Series'))) + 
+  ylab(expression(bold('Density')))
+
+
+```
+Kurtosis and Skewness
+```{r}
+Kurtosis_Returns <- kurtosis(return_series, na.rm = TRUE)
+Skewness_Returns <- skewness(return_series, na.rm = TRUE)
+```
+
+
+```{r}
+scatter <- cbind(X=return_series,Y=lag(return_series))
+
+ggplot(scatter, aes(y=scatter$X,x = scatter$Y)) + 
+  geom_point() +
+  geom_smooth(aes(),method=lm,se=FALSE,fill = "#3399FF", colour="#0000FF",size =1)  
+```
+
+## Estimate ARMA and GARCH models
+ # Note: A GARCH process has zero mean by definition, so you would have to first
+ # demean the return series, or jointly estimate an ARMA-GARCH model.
+ 
+Demean returns
+
+```{r}
+returns_dm <- return_series - mean(return_series)
+
+# Test
+mean(returns_dm)
+```
+ 
+
+Model Nr. 1 ARMA(2,2)
+
+```{r}
+spec <- arfimaspec(mean.model=list(armaOrder=c(2,2)), distribution.model='std')
+arma22 <- arfimafit(spec=spec,data=return_series)
+show(arma22) # The 'shape' parameters corresponds to the DoF of the Student-t residuals.
+
+likelihood(arma22)
+
+st_resid_arma22 <- residuals(arma22,standardize=T)
+acf(st_resid_arma22)
+mtext('Autocorrelation of Standardized Residuals ARMA model', side = 3, line = -2, outer = TRUE, cex = 1.5)
+
+Box.test(st_resid_arma22, lag = 1, type = "Ljung-Box", fitdf = 0)
+Box.test(st_resid_arma22, lag = 5, type = "Ljung-Box", fitdf = 0)
+Box.test(st_resid_arma22, lag = 10, type = "Ljung-Box", fitdf = 0)
+Box.test(st_resid_arma22, lag = 20, type = "Ljung-Box", fitdf = 0)
+
+```
+
+
+Model Nr. 2 Garch
+
+```{r}
+spec <- ugarchspec(mean.model=list(armaOrder=c(0,0), include.mean=F),
+                   variance.model=list(model='eGARCH', garchOrder=c(2,2)), distribution.model = "std")
+garch11 <- ugarchfit(spec=spec,data=returns_dm)
+
+csd_garch11 <- sigma(garch11) # Get fitted conditional standard deviations.
+plot(csd_garch11)
+
+st_resid_garch11 <- residuals(garch11,standardize=T)
+plot(st_resid_garch11)
+
+print(garch11)
+
+acf(st_resid_garch11)
+mtext('Autocorrelation of Standardized Residuals GARCH model', side = 3, line = -2, outer = TRUE, cex = 1.5)
+Box.test(st_resid_garch11, lag = 1, type = "Ljung-Box", fitdf = 0)
+Box.test(st_resid_garch11, lag = 5, type = "Ljung-Box", fitdf = 0)
+Box.test(st_resid_garch11, lag = 10, type = "Ljung-Box", fitdf = 0)
+Box.test(st_resid_garch11, lag = 20, type = "Ljung-Box", fitdf = 0)
+
+qqnorm(st_resid_garch11, main = "Normal vs Empirical distribution standardized returns GARCH(1,1)"); qqline(st_resid_garch11, col ="red", lty =2, lwd = 2)
+
+```
+
+
+Model Nr. 3 GJR - Garch
+
+```{r}
+spec <- ugarchspec(mean.model=list(armaOrder=c(0,0), include.mean=F),
+                   variance.model=list(model='gjrGARCH', garchOrder=c(1,1)), distribution.model = "std")
+gjrgarch11 <- ugarchfit(spec=spec,data=returns_dm)
+
+csd_gjrgarch11 <- sigma(garch11) # Get fitted conditional standard deviations.
+plot(csd_gjrgarch11)
+
+plot(c(csd_gjrgarch11,csd_garch11))
+
+st_resid_gjrgarch11 <- residuals(gjrgarch11,standardize=T)
+plot(st_resid_gjrgarch11)
+
+qqnorm(st_resid_gjrgarch11 , main = "Normal vs Empirical distribution standardized returns GJR-GARCH"); qqline(st_resid_garch11, col ="red", lty =2, lwd = 2)
+
+# acf and pacf of standardized residuals show no ac
+
+print(gjrgarch11)
+
+acf(st_resid_gjrgarch11)
+mtext('Autocorrelation of Standardized Residuals GJR-GARCH model', side = 3, line = -2, outer = TRUE, cex = 1.5)
+
+Box.test(st_resid_gjrgarch11, lag = 1, type = "Ljung-Box", fitdf = 0)
+Box.test(st_resid_gjrgarch11, lag = 5, type = "Ljung-Box", fitdf = 0)
+Box.test(st_resid_gjrgarch11, lag = 10, type = "Ljung-Box", fitdf = 0)
+Box.test(st_resid_gjrgarch11, lag = 20, type = "Ljung-Box", fitdf = 0)
+
+
+garch11_likelihood <- likelihood(garch11)
+gjrgarch11_likelihood <- likelihood(gjrgarch11)
+likelihood <- lr.test(garch11_likelihood, gjrgarch11_likelihood, alpha = 0.05, df = 1)
+print(likelihood)
+```
+
+===========
+Exercise 2:
+===========
+
+```{r}
+VaR_result <- data.frame(matrix(nrow = 3, ncol = 4), stringsAsFactors = FALSE)
+rownames(VaR_result) <- c("Standard", "Forecast GARCH", "Simulation GARCH")
+colnames(VaR_result) <- c("1 % VaR","5 % VaR","1 % ES","5 % ES")
+VaR_result
+```
+
+
+```{r}
+#end_date <- "/2008-09-12"
+end_date <- "/2008-10-6"
+sub_sample_returns <- return_series[end_date]
+plot(sub_sample_returns)
+```
+
+Set up
+
+```{r}
+std_sub_sample <- sd(sub_sample_returns)
+mean_sub_sample <-  mean(sub_sample_returns)
+
+position <- 1000000
+
+quantile_easy_way <- c('5% VaR'=qnorm(0.05),'1% VaR'=qnorm(0.01))
+```
+
+```{r}
+var_easy_way <- (1-exp((mean_sub_sample + quantile_easy_way*std_sub_sample))) * position
+var_easy_way
+
+VaR_result[1,2] <- var_easy_way[1]
+VaR_result[1,1] <- var_easy_way[2]
+
+```
+
+
+```{r}
+quantile <- c('5% ES'=quantile(sub_sample_returns, 0.05),'1% ES'=quantile(sub_sample_returns, 0.01))
+
+es_easy_way_5 <- (1-exp(mean(sub_sample_returns[sub_sample_returns < quantile[1]]))) * position
+es_easy_way_5
+es_easy_way_1 <- (1-exp(mean(sub_sample_returns[sub_sample_returns < quantile[2]]))) * position
+es_easy_way_1
+
+VaR_result[1,3] <- es_easy_way_1
+VaR_result[1,4] <- es_easy_way_5
+
+```
+
+
+With GARCH
+```{r}
+#plot(return_series["2008-09-10/2008-09-16"])
+```
+
+```{r}
+spec <- ugarchspec(mean.model=list(armaOrder=c(0,0), include.mean=F),
+                   variance.model=list(model='sGARCH', garchOrder=c(1,1)),
+                   distribution.model='std')
+
+sub_sample_garch <- ugarchfit(spec=spec,data=sub_sample_returns)
+dof <- coef(sub_sample_garch)[4] # Estimated DoF of Student-t residuals
+sub_sample_csd <- ugarchforecast(sub_sample_garch,n.ahead = 1)
+sub_sample_csd <- as.numeric(sigma(sub_sample_csd))
+
+
+#Simulation Returns Distribution
+
+simulation <- ugarchsim(sub_sample_garch, n.sim = 1, n.start = 0, m.sim = 10000, startMethod = "sample", rseed = 10)
+print(simulation)
+
+
+returns_simulation <- sub_sample_returns
+returns_simulation[2] <- t(simulation@simulation$seriesSim)
+plot(returns_simulation)
+mtext('Simulation of Returns Distribution', side = 3, line = -2, outer = TRUE, cex = 1.5)
+
+# Forecast tomorrows conditional standard deviation.
+```
+
+```{r}
+a <- c('5% VaR'=0.95,'1% VaR'=0.99)
+wealth <- 1000000
+var_garch_r <- qt(1-a,dof)*sub_sample_csd + mean_sub_sample # VaR in log-returns / use 'qnorm' for Gaussian residuals.
+
+var_garch_w <- wealth*(1-exp(var_garch_r))
+var_garch_w
+
+var_simulation_5 <- quantile(returns_simulation, 0.05, na.rm = TRUE)
+var_simulation_1 <- quantile(returns_simulation, 0.01, na.rm = TRUE)
+
+
+VaR_result[2,1] <- var_garch_w[2]
+VaR_result[2,2] <- var_garch_w[1]
+VaR_result[3,2] <- abs(var_simulation_5*wealth)
+VaR_result[3,1] <- abs(var_simulation_1*wealth)
+```
+
+# ES from a GARCH model
+# Note: If no explicit formula exists, you can always simulate.
+# If X is uniformly distributed over [0,1] and F is an inverse cumulative
+# distribution function for some distribution D, then F(X) is D-distributed.
+X <- runif(1000,min=0,max=1) # Draw 1000 values uniformly in [0,1]
+Y <- qt(X,dof) # Convert to Student-t. Alternatively use 'rt'.
+L <- wealth*(1-exp(csd*Y + r.m)) # Simulate loss distribution.
+es_garch_w <- mean(L[L>var_garch_w])
+
+```{r}
+X <- runif(1000,min=0,max=1) # Draw 1000 values uniformly in [0,1]
+Y <- qt(X,dof) # Convert to Student-t. Alternatively use 'rt'.
+L <- wealth*(1-exp(sub_sample_csd*Y + mean_sub_sample)) # Simulate loss distribution.
+VaR_result[2,4] <- mean(L[L>var_garch_w[1]])
+VaR_result[2,3] <- mean(L[L>var_garch_w[2]])
+
+Distribution_5 <- mean(returns_simulation[returns_simulation<= var_simulation_5])
+Distribution_1 <- mean(returns_simulation[returns_simulation<= var_simulation_1])
+VaR_result[3,4] <- abs(Distribution_5*wealth)
+VaR_result[3,3] <- abs(Distribution_1*wealth)
+```
+
+```{r}
+#return_series["2008-09-15"]
+
+return_series["2008-10-7"]
+
+(1-exp(return_series["2008-09-15"]))*position
+(1-exp(return_series["2008-10-07"]))*position
+
+VaR_result
+```
+
+
