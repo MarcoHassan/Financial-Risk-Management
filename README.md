@@ -35,6 +35,9 @@ Finally, the two classical risk measures of the **Value at Risk** and **Expected
 
 Albeit the GARCH model is shown to perform better in capturing the downturns of the financial crises of 2007 compared to an ARMA(2,2) model both results are poor and far from matching the real observed losses.
 
+
 ![image](https://user-images.githubusercontent.com/42472072/52468645-ff00b700-2b91-11e9-8873-6b4cdb1b4917.png)
+
+
 
 This is the reason why we turned to **Extreme Value Theory** and the heavy tail modelling in the next part.
