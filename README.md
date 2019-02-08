@@ -55,3 +55,49 @@ In contrast to the GARCH approach, EVT does not aim at modelling the entire dist
 returns, but as its name suggest – extreme value theory – it focus just on the tail modelling.
 This key feature of EVT makes it valuable for risk managers as it gives the right theoretical
 framework to model the tail risk despite a low number of observations.
+
+Moreover, EVT parameters are not affected by the distribution of the returns in normal times,
+which are of little interest to risk managers. Just tail observations are used to model the tail
+distribution of returns.
+
+Without going into detail it is now possible to use the fact that under the Fisher-Tippett theorem the only three possible domain of attraction of the normalized sequence of i.i.d. maximums with cumulative distribution F are either Fréchet, a Gumbel or a Weibull distributions. 
+
+Given such a result and the three different distributions we proceed the analysis by trying to modelling the fat tails of the empirical distribution making by modelling them via a Fréchet distribution, which displays heavy fat tails.
+
+![image](https://user-images.githubusercontent.com/42472072/52469191-7daa2400-2b93-11e9-927b-7596c271e340.png)
+
+I modelled the Fréchet via the Hill-estimator.
+
+In the following we continue our analysis based on the peak over threshold approach. Here
+maxima observations do not result from the maximum in each time-series block, but from the
+observations over and above a given threshold.
+
+Selecting different thresholds, will result in different model specifications, which will report a
+higher or lower number of observations.
+
+The trade-off will be the following: a higher number of observations will increase the
+estimation precision of the shape parameter; however, a higher number of observations will
+come at the expense of a lower threshold where the generalized pareto distribution
+approximation will not hold with the consequent bias of the results.
+
+The Hill-estimator, relies on the peak over threshold technique, where we assume to
+possibility to approximate the tail of our maxima distribution with a generalized pareto
+distribution with positive shape parameter.
+
+As the approximation works just in the very tail of the distribution and the Hill-estimator
+makes use of over the threshold observations, the trade-off in the Hill-estimator is again given
+by low variance vs. low bias.
+
+To compute the Hill estimator in a consistent way we must then choose an appropriate range
+of thresholds. This is chosen as the region where the Hill is stable.
+
+Computing the Hill-estimator for a number of threshold it is then possible to approximate such given range; from the following graph this is among the 55th and the 20th over the threshold observation.
+
+![image](https://user-images.githubusercontent.com/42472072/52469458-26588380-2b94-11e9-822e-2079feef20c9.png)
+
+Based on the average Hill estimator over such range I subsequently estimated the VaR and ES incorporating the accordingly modelled heavy tail distribution with the following results.
+
+![image](https://user-images.githubusercontent.com/42472072/52469650-b7c7f580-2b94-11e9-8106-6ec5b1e39601.png)
+
+
+
