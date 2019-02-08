@@ -41,3 +41,17 @@ Albeit the GARCH model is shown to perform better in capturing the downturns of 
 
 
 This is the reason why we turned to **Extreme Value Theory** and the heavy tail modelling in the next part.
+
+# Part 2
+
+Using GARCH, the risk manager models the entire distribution of the returns. The MLestimation
+of the GARCH parameters, maximize consequently the likelihood of getting the
+observed returns distribution based on the assumption of GARCH-model-returns. Under the
+specification of t-distribution innovation terms and asymmetric GARCH model it is then
+possible to get return’s density functions with fat tails and to get reasonable estimators for
+the various risk-measures.
+
+In contrast to the GARCH approach, EVT does not aim at modelling the entire distribution of
+returns, but as its name suggest – extreme value theory – it focus just on the tail modelling.
+This key feature of EVT makes it valuable for risk managers as it gives the right theoretical
+framework to model the tail risk despite a low number of observations.
