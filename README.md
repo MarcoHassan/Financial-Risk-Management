@@ -1,7 +1,40 @@
 # R-Financial-Risk-Management
 
-Financial Risk Management exercises. 
+Authors: Marco Hassan
 
-Extreme value theory and hill estimator. 
+Semester exercise for a lecture in Financial Risk Management at the University of St. Gallen.
 
-Linear times series and heteroskedastic modelling of financial returns for financial risk management purposes.
+The goal is to model financial returns incorporating clustering and heteroskedasticity of returns as well as with fat tailed distributions based on extreme value theory and check how the different models would have performed in the financial crises of 2007.
+
+# Part 1
+
+In this part a univariate financial times series analysis is performed. 
+
+The classical features of returns is observed, where there is little or no autocorrelation in the first moment, conferming the hypothesis of i.i.d. returns.
+
+![image](https://user-images.githubusercontent.com/42472072/52468141-76354b80-2b90-11e9-8ff2-a2ab430bd232.png)
+
+Despite of that there is clustering of returns in the series and the squared returns that represent a proxy for the unobserved volatility measure show profund autocorrelation.
+
+![image](https://user-images.githubusercontent.com/42472072/52468219-ba285080-2b90-11e9-92b9-6c76022cd63a.png)
+
+![image](https://user-images.githubusercontent.com/42472072/52468211-ac72cb00-2b90-11e9-9da6-7e490752c7a6.png)
+
+This together with the empirical observed leptokurtic distribution of returns suggests for an alternative modelling of returns as simply modelling returns through linear times series models with the additional assumption of normally distributed returns will not capture the clustering of returns nor the heavy tails of the distribution.
+
+
+![image](https://user-images.githubusercontent.com/42472072/52468337-18553380-2b91-11e9-873e-a04427ee4640.png)
+
+This is addressed in a first step by modelling the heteroskedastic component of returns through the classical GARCH model.
+
+After applying the most basic GARCH model an evalutation checks at the asymmetric effect of negative vs. positive returns for the subsequent returns observing a higher effect of negative in influencing the volatility in the market.
+
+A the GJR-GARCH model incorportating such effect is hence evalued and used for further evalutations.
+
+Finally, the two classical risk measures of the **Value at Risk** and **Expected Shortfall** are computed using both a linear times series modelling via an ARMA(2,2) and a GARCH model.
+
+Albeit the GARCH model is shown to perform better in capturing the downturns of the financial crises of 2007 compared to an ARMA(2,2) model both results are poor and far from matching the real observed losses.
+
+![image](https://user-images.githubusercontent.com/42472072/52468645-ff00b700-2b91-11e9-8873-6b4cdb1b4917.png)
+
+This is the reason why we turned to **Extreme Value Theory** and the heavy tail modelling in the next part.
