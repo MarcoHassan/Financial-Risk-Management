@@ -1,6 +1,6 @@
 # R-Financial-Risk-Management
 
-Authors: Marco Hassan
+Author: Marco Hassan
 
 Semester exercise for a lecture in Financial Risk Management at the University of St. Gallen.
 
